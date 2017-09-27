@@ -78,20 +78,23 @@ for datasetType in ['collision', 'HardBrake']:
     bucket = s3.get_bucket(BUCKET_NAME)
 
     for sampleKey in bucket.list(prefix='collision-detection/' + datasetType + '/', delimiter='/'):
-        if not os.path.exists(dataDir):
-            os.makedirs(dataDir)
+        incidentId = os.path.basename(sampleKey.name[:-1])
+        print "preparing " + datasetType + " data " + "with incidentId = " + incidentId
+        incidentDir = os.path.join(dataDir, incidentId)
+        if not os.path.exists(incidentDir):
+            os.makedirs(incidentDir)
 
         keys = s3.get_bucket(BUCKET_NAME).get_all_keys(prefix=sampleKey.name, delimiter='/')
         for key in keys:
-            key.get_contents_to_filename(os.path.join(dataDir, os.path.basename(key.name)))
+            key.get_contents_to_filename(os.path.join(incidentDir, os.path.basename(key.name)))
 
-        incidentId  = os.path.basename(sampleKey.name[:-1])
+
         curSenData = []
 
-        accFFTFin, accRes = parse_sensor_file(dataDir, 'acc.log', accSepcturalSamples)
-        gyroFFTFin, gyroRes = parse_sensor_file(dataDir, 'gyro.log', gyroSepcturalSamples)
-        gpsFFTFin, gpsRes = parse_sensor_file(dataDir, 'gps.log', gpsSepcturalSamples)
-        magFFTFin, magRes = parse_sensor_file(dataDir, 'magnetometer.log', magSepcturalSamples)
+        accFFTFin, accRes = parse_sensor_file(incidentDir, 'acc.log', accSepcturalSamples)
+        gyroFFTFin, gyroRes = parse_sensor_file(incidentDir, 'gyro.log', gyroSepcturalSamples)
+        gpsFFTFin, gpsRes = parse_sensor_file(incidentDir, 'gps.log', gpsSepcturalSamples)
+        magFFTFin, magRes = parse_sensor_file(incidentDir, 'magnetometer.log', magSepcturalSamples)
 
         if not (accRes and gyroRes and gpsRes and magRes):
             continue
@@ -104,7 +107,7 @@ for datasetType in ['collision', 'HardBrake']:
         else:
             curSenData += '0'  #HardBrake
 
-        fileOut = open(os.path.join(dataDir, incidentId + '.csv'), 'w')
+        fileOut = open(os.path.join(incidentDir, incidentId + '.csv'), 'w')
         curOut = [str(ele) for ele in curSenData]
         curOut = ','.join(curOut) + '\n'
         fileOut.write(curOut)
@@ -112,15 +115,17 @@ for datasetType in ['collision', 'HardBrake']:
 
         if i%10 < 10 * training_per:
             key = bucket.new_key('collision-detection-dataset/v0/train/train_' + incidentId + '.csv')
-            key.set_contents_from_filename(os.path.join(dataDir, incidentId + '.csv'))
+            key.set_contents_from_filename(os.path.join(incidentDir, incidentId + '.csv'))
             train_ids.append(incidentId)
         else:
             key = bucket.new_key('collision-detection-dataset/v0/eval/eval_' + incidentId + '.csv')
-            key.set_contents_from_filename(os.path.join(dataDir, incidentId + '.csv'))
+            key.set_contents_from_filename(os.path.join(incidentDir, incidentId + '.csv'))
             eval_ids.append(incidentId)
 
-        if os.path.exists(dataDir):
-            shutil.rmtree(dataDir)
+        if os.path.exists(incidentDir):
+            shutil.rmtree(incidentDir)
+
+        print "preparing " + "incidentId = " + incidentId  + " were completed"
         i += 1
 
     if not os.path.exists(dataDir):
@@ -136,10 +141,10 @@ for datasetType in ['collision', 'HardBrake']:
     evalIdsFile.write('\n'.join(eval_ids))
     evalIdsFile.close()
 
-    key = bucket.new_key("collision-detection-dataset-v0/" + datasetType + "/TrainIds.csv" )
+    key = bucket.new_key("collision-detection-dataset/v0/" + datasetType + "/TrainIds.csv" )
     key.set_contents_from_filename(trainPath)
 
-    key = bucket.new_key("collision-detection-dataset-v0/" + datasetType + "/EvalIds.csv")
+    key = bucket.new_key("collision-detection-dataset/v0/" + datasetType + "/EvalIds.csv")
     key.set_contents_from_filename(evalPath)
 
 #ACC = 3x2x100
