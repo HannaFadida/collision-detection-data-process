@@ -68,26 +68,27 @@ def parse_sensor_file (dataDir, fileName, sensorSepcturalSamples):
 
 s3 = boto.connect_s3()
 
-for datasetType in ['collision', 'HardBrake']:
+for datasetType in ['HardBrake']: #['collision', 'HardBrake']:
     train_ids = []
     eval_ids = []
 
-    dataDir = 'collision-detection/' + datasetType
+    dataDir = 'collision-detection-sensors-data/' + datasetType
 
     i = 0
     bucket = s3.get_bucket(BUCKET_NAME)
 
-    for sampleKey in bucket.list(prefix='collision-detection/' + datasetType + '/', delimiter='/'):
-        incidentId = os.path.basename(sampleKey.name[:-1])
+    #download the whole data first! - iterate over collision-detection-sensors-data
+
+    for incidentId in next(os.walk(dataDir))[1]:
+        if incidentId <= "108c05fa4b51d9c3e28c6495662e19ac": continue
         print "preparing " + datasetType + " data " + "with incidentId = " + incidentId
         incidentDir = os.path.join(dataDir, incidentId)
-        if not os.path.exists(incidentDir):
-            os.makedirs(incidentDir)
 
-        keys = s3.get_bucket(BUCKET_NAME).get_all_keys(prefix=sampleKey.name, delimiter='/')
-        for key in keys:
-            key.get_contents_to_filename(os.path.join(incidentDir, os.path.basename(key.name)))
 
+        if not (os.path.exists(os.path.join(incidentDir, "acc.log")) and
+                os.path.exists(os.path.join(incidentDir, "gyro.log")) and
+                os.path.exists(os.path.join(incidentDir, "gps.log")) and
+                os.path.exists(os.path.join(incidentDir, "magnetometer.log"))): continue
 
         curSenData = []
 
@@ -98,6 +99,7 @@ for datasetType in ['collision', 'HardBrake']:
 
         if not (accRes and gyroRes and gpsRes and magRes):
             continue
+
         curSenData += accFFTFin
         curSenData += gyroFFTFin
         curSenData += gpsFFTFin
