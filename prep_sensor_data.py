@@ -124,8 +124,8 @@ for datasetType in ['HardBrake']: #['collision', 'HardBrake']:
             key.set_contents_from_filename(os.path.join(incidentDir, incidentId + '.csv'))
             eval_ids.append(incidentId)
 
-        if os.path.exists(incidentDir):
-            shutil.rmtree(incidentDir)
+        #if os.path.exists(incidentDir):
+        #    shutil.rmtree(incidentDir)
 
         print "preparing " + "incidentId = " + incidentId  + " were completed"
         i += 1
